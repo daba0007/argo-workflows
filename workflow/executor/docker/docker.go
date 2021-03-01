@@ -204,9 +204,9 @@ func (d *DockerExecutor) syncContainerIDs(ctx context.Context, containerNames []
 			output, err := common.RunCommand(
 				"docker",
 				"ps",
-				"--all",      // container could have already exited, but there could also have been two containers for the same pod (old container not yet cleaned-up)
-				"--no-trunc", // display long container IDs
-				"--format={{.Label \"io.kubernetes.container.name\"}}={{.ID}}",
+				"--all",                                                                   // container could have already exited, but there could also have been two containers for the same pod (old container not yet cleaned-up)
+				"--no-trunc",                                                              // display long container IDs
+				"--format={{.State}},{{.Label \"io.kubernetes.container.name\"}},{{.ID}}", // similar to `running,main,035a98c4e72e`
 				// https://github.com/kubernetes/kubernetes/blob/ca6bdba014f0a98efe0e0dd4e15f57d1c121d6c9/pkg/kubelet/dockertools/labels.go#L37
 				"--filter=label=io.kubernetes.pod.namespace="+d.namespace,
 				"--filter=label=io.kubernetes.pod.name="+d.podName,
@@ -215,13 +215,14 @@ func (d *DockerExecutor) syncContainerIDs(ctx context.Context, containerNames []
 				return err
 			}
 			for _, l := range strings.Split(string(output), "\n") {
-				parts := strings.Split(strings.TrimSpace(l), "=")
-				if len(parts) != 2 {
+				parts := strings.Split(strings.TrimSpace(l), ",")
+				if len(parts) != 3 {
 					continue
 				}
-				containerName := parts[0]
-				containerID := parts[1]
-				if d.containers[containerName] == "" && containerID != "" {
+				status := parts[0]
+				containerName := parts[1]
+				containerID := parts[2]
+				if (d.containers[containerName] == "" || status == "running") && containerID != "" { // we'll take any name if we don't think it yet, but we'll always take the running container in precedence
 					d.containers[containerName] = containerID
 					log.Infof("mapped container name %q to container ID %q", containerName, containerID)
 				}
