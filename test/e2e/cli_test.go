@@ -850,7 +850,6 @@ func (s *CLISuite) TestWorkflowWait() {
 }
 
 func (s *CLISuite) TestWorkflowWatch() {
-	s.Need(Offloading)
 	s.Given().
 		Workflow("@smoke/basic.yaml").
 		When().

@@ -219,10 +219,19 @@ func (d *DockerExecutor) syncContainerIDs(ctx context.Context, containerNames []
 				if len(parts) != 3 {
 					continue
 				}
-				status := parts[0]
+				status := strings.SplitN(parts[0], " ", 2)[0] // Created,Exited,Up,
 				containerName := parts[1]
 				containerID := parts[2]
-				if (strings.HasPrefix(status, "Exited") || strings.HasPrefix(status, "Up")) && containerID != "" && d.containers[containerName] != containerID {
+				if d.containers[containerName] == "" && containerID != "" {
+					if status == "Created" { // for "Created" we must check to see if it was an early (non-zero) exit
+						output, err := common.RunCommand("docker", "inspect", containerID, "--format={{.State.ExitCode}}")
+						if err != nil {
+							return err
+						}
+						if strings.TrimSpace(string(output)) == "0" { // this remain "0" until it is not "Created" anymore
+							continue
+						}
+					}
 					d.containers[containerName] = containerID
 					log.Infof("mapped container name %q to container ID %q", containerName, containerID)
 				}
