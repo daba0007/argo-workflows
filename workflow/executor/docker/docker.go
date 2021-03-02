@@ -222,7 +222,7 @@ func (d *DockerExecutor) syncContainerIDs(ctx context.Context, containerNames []
 				status := parts[0]
 				containerName := parts[1]
 				containerID := parts[2]
-				if (d.containers[containerName] == "" || strings.HasPrefix(status, "Up")) && containerID != "" { // we'll take any name if we don't think it yet, but we'll always take the running container in precedence
+				if (strings.HasPrefix(status, "Exited") || strings.HasPrefix(status, "Up")) && containerID != "" && d.containers[containerName] != containerID {
 					d.containers[containerName] = containerID
 					log.Infof("mapped container name %q to container ID %q", containerName, containerID)
 				}
